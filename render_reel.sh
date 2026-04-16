@@ -8,8 +8,26 @@ ARTIST="phonkstax"
 WORKDIR="/tmp/reels_phonkstax"
 mkdir -p $WORKDIR
 
-# Download Assets
-yt-dlp -x --audio-format mp3 --write-thumbnail --convert-thumbnails jpg -o "$WORKDIR/audio.%(ext)s" "https://www.youtube.com/watch?v=$VIDEO_ID"
+# Get a fresh token specifically for yt-dlp authentication
+# We reuse the logic from your python script to get a bearer token
+ACCESS_TOKEN=$(python3 -c "
+import os, requests, json
+oauth_data = json.loads(os.environ['YTM_OAUTH_JSON'])
+payload = {
+    'client_id': os.environ['YTM_CLIENT_ID'],
+    'client_secret': os.environ['YTM_CLIENT_SECRET'],
+    'refresh_token': oauth_data['refresh_token'],
+    'grant_type': 'refresh_token'
+}
+print(requests.post('https://oauth2.googleapis.com/token', data=payload).json().get('access_token'))
+")
+
+# Download Assets using the OAuth Token to bypass bot detection
+# We add --add-header to simulate an authorized request
+yt-dlp -x --audio-format mp3 --write-thumbnail --convert-thumbnails jpg \
+  --add-header "Authorization:Bearer $ACCESS_TOKEN" \
+  -o "$WORKDIR/audio.%(ext)s" "https://www.youtube.com/watch?v=$VIDEO_ID"
+
 cp ./assets/spotify.png $WORKDIR/spotify.png
 
 # Trim Audio (Last 30s)
@@ -21,7 +39,7 @@ subprocess.run(['ffmpeg', '-y', '-i', '$WORKDIR/audio.mp3', '-ss', str(max(0, du
 os.replace('$WORKDIR/trimmed.mp3', '$WORKDIR/audio.mp3')
 "
 
-# Render
+# Render Logic (Keeping your n8n FFmpeg filters)
 FONT="$WORKDIR/BebasNeue.ttf"
 [ -f "$FONT" ] || curl -sL -o "$FONT" "https://github.com/googlefonts/BebasNeue/raw/main/fonts/ttf/BebasNeue-Regular.ttf"
 
