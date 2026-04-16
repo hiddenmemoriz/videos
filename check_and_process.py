@@ -41,11 +41,11 @@ def check_notion_entry(video_id):
     return len(res.get("results", [])) > 0
 
 def download_media(video_id):
-    print(f"📡 Requesting Cobalt bridge for {video_id}...")
+    print(f"📡 Requesting Cobalt v10 bridge for {video_id}...")
     os.makedirs(WORKDIR, exist_ok=True)
     
-    # We'll try a more direct API endpoint
-    API_URL = "https://api.cobalt.tools/api/json" 
+    # Updated v10 Endpoint
+    API_URL = "https://api.cobalt.tools/" 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     
     headers = {
@@ -54,35 +54,40 @@ def download_media(video_id):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
+    # Updated v10 Payload Structure
     payload = {
         "url": youtube_url,
-        "downloadMode": "audio",
+        "videoQuality": "720",     # Required even for audio-only sometimes
         "audioFormat": "mp3",
-        "audioBitrate": "192"
+        "filenameStyle": "basic",
+        "downloadMode": "audio",   # Options: 'auto', 'audio', 'mute'
+        "youtubeVideoCodec": "h264"
     }
 
     try:
         response = requests.post(API_URL, json=payload, headers=headers)
         
-        # Check if the status code is healthy before parsing JSON
         if response.status_code != 200:
-            print(f"❌ Cobalt API returned Status {response.status_code}")
+            print(f"❌ Cobalt v10 returned Status {response.status_code}")
             print(f"Raw Response: {response.text}")
             sys.exit(1)
 
         result = response.json()
 
-        if result.get("status") in ["stream", "redirect", "tunnel"]:
+        # v10 returns status "picker", "redirect", or "tunnel"
+        if result.get("status") in ["redirect", "tunnel", "picker"]:
             download_url = result.get("url")
             print(f"✅ Bridge opened: {download_url}")
             
             # Download the MP3
+            print("⏳ Downloading MP3...")
             audio_data = requests.get(download_url, stream=True)
             with open(f"{WORKDIR}/audio.mp3", "wb") as f:
                 for chunk in audio_data.iter_content(chunk_size=8192):
                     f.write(chunk)
             
-            # Fetch Thumbnail (Directly from Google/YouTube CDN)
+            # Fetch Thumbnail
+            print("🖼️ Fetching Thumbnail...")
             thumb_url = f"https://i3.ytimg.com/vi/{video_id}/maxresdefault.jpg"
             thumb_data = requests.get(thumb_url)
             with open(f"{WORKDIR}/audio.jpg", "wb") as f:
@@ -91,16 +96,12 @@ def download_media(video_id):
             print("🎉 Media download complete.")
             return True
         else:
-            print(f"❌ Cobalt Error: {result.get('text', 'Unknown response state')}")
+            print(f"❌ Cobalt v10 Error: {result.get('text', 'Unknown response state')}")
             sys.exit(1)
 
-    except json.decoder.JSONDecodeError:
-        print(f"💥 Failed to parse JSON. Server response was: {response.text}")
-        sys.exit(1)
     except Exception as e:
         print(f"💥 Critical Error: {e}")
         sys.exit(1)
-
 def main():
     token = get_yt_token()
     item = get_first_item(token)
