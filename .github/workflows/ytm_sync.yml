@@ -1,24 +1,18 @@
-name: Get YTM Playlist Items
+name: Get REAL Playlist IDs
 
 on:
-  workflow_dispatch: # Allows you to run it manually
+  workflow_dispatch:
 
 jobs:
-  fetch:
+  fetch-ids:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install yt-dlp
-        run: |
-          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-          sudo chmod a+rx /usr/local/bin/yt-dlp
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Run Script
+        env:
+          YTM_CLIENT_ID: ${{ secrets.YTM_CLIENT_ID }}
+          YTM_CLIENT_SECRET: ${{ secrets.YTM_CLIENT_SECRET }}
+          YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
         run: python get_playlist.py
