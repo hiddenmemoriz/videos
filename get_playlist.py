@@ -1,51 +1,47 @@
 import os
 import json
-from ytmusicapi import YTMusic
+from ytmusicapi import YTMusic, OAuthCredentials
 
 def get_ytm_client():
+    # 1. Reconstruct secrets
     oauth_raw = os.environ.get("YTM_OAUTH_JSON")
+    client_id = os.environ.get("YTM_CLIENT_ID")
+    client_secret = os.environ.get("YTM_CLIENT_SECRET")
     
-    # Ensure the directory exists (helpful for GitHub Actions)
     with open("oauth.json", "w") as f:
         f.write(oauth_raw)
 
-    # Initialize WITHOUT extra credentials objects first 
-    # to see if the JSON file is enough (standard library behavior)
-    try:
-        # If you have a Brand Account, you might need: YTMusic("oauth.json", brand_id="12345...")
-        # For now, let's try the simplest initialization
-        return YTMusic("oauth.json")
-    except Exception as e:
-        print(f"Initialization Error: {e}")
-        return None
+    # 2. Setup Credentials Object
+    auth_keys = OAuthCredentials(
+        client_id=client_id,
+        client_secret=client_secret
+    )
+
+    # 3. Initialize
+    # Try it first without brand_id; if it fails, add brand_id=...
+    return YTMusic("oauth.json", oauth_credentials=auth_keys)
 
 def main():
     yt = get_ytm_client()
-    if not yt:
-        return
-
-    print("Testing connection with get_library_playlists...")
-    try:
-        # This is a lighter call than get_playlist
-        test = yt.get_library_playlists(limit=1)
-        print("Auth check: Success!")
-    except Exception as e:
-        print(f"Auth check failed: {e}")
-        # Let's print the headers the library is using (careful: hide tokens)
-        print("Check if Client ID/Secret are correctly mapped in your secrets!")
-
+    
+    # Use the clean ID from your URL
     playlist_id = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
     
+    print(f"Checking access to private playlist...")
     try:
-        # Force a small limit to reduce payload size
-        playlist = yt.get_playlist(playlist_id, limit=20)
-        print(f"Playlist Title: {playlist.get('title')}")
+        # For private playlists, sometimes 'limit' helps the server process the request
+        playlist = yt.get_playlist(playlist_id, limit=None)
         
-        for track in playlist.get('tracks', []):
-            print(f"ID: {track['videoId']} | {track['title']}")
+        print(f"--- SUCCESS! Found Private Playlist: {playlist['title']} ---")
+        
+        for track in playlist['tracks']:
+            # Log the IDs - useful for your FFmpeg/Reels automation
+            print(f"ID: {track['videoId']} | Title: {track['title']}")
             
     except Exception as e:
-        print(f"Playlist Error: {e}")
+        print(f"CRITICAL ERROR: {e}")
+        print("Check if: 1. Your app is 'Published' in Google Cloud.")
+        print("2. The Client ID is 'TVs and Limited Input devices'.")
 
 if __name__ == "__main__":
     main()
