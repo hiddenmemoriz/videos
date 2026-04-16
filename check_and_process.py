@@ -42,38 +42,58 @@ def check_notion_entry(video_id):
     return len(res.get("results", [])) > 0
 
 def download_media(video_id, token):
-    print(f"Downloading media for {video_id} using iOS client spoofing...")
+    print(f"📡 Requesting Cobalt bridge for {video_id}...")
     os.makedirs(WORKDIR, exist_ok=True)
     
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': f'{WORKDIR}/audio.%(ext)s',
-        'writethumbnail': True,
-        # iOS client is currently the most stable for bypassing 400 errors in CI/CD
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios'],
-                'skip': ['dash', 'hls']
-            }
-        },
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }, {
-            'key': 'FFmpegThumbnailsConvertor',
-            'format': 'jpg',
-        }],
-        'http_headers': {
-            'Authorization': f'Bearer {token}',
-            'User-Agent': 'com.google.ios.youtube/19.12.3 (iPhone16,2; iOS 17_4_1; Scale/3.00)'
-        },
-        'nocheckcertificate': True,
-        'quiet': False
+    # Public Cobalt instance API
+    API_URL = "https://cobalt.tools/api/json" 
+    youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+    
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "url": youtube_url,
+        "downloadMode": "audio",
+        "audioFormat": "mp3",
+        "audioBitrate": "192"
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([f'https://www.youtube.com/watch?v={video_id}'])
+    try:
+        # 1. Get the download link from Cobalt
+        response = requests.post(API_URL, json=payload, headers=headers)
+        result = response.json()
+
+        if response.status_code == 200 and result.get("status") in ["stream", "redirect", "tunnel"]:
+            download_url = result.get("url")
+            print(f"✅ Bridge opened: {download_url}")
+            
+            # 2. Download the MP3
+            print("⏳ Downloading MP3...")
+            audio_data = requests.get(download_url, stream=True)
+            with open(f"{WORKDIR}/audio.mp3", "wb") as f:
+                for chunk in audio_data.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            # 3. Get the high-res Thumbnail (since Cobalt is primarily audio/video)
+            # We use the standard YouTube i3.ytimg link which is rarely IP blocked
+            print("🖼️ Fetching Thumbnail...")
+            thumb_url = f"https://i3.ytimg.com/vi/{video_id}/maxresdefault.jpg"
+            thumb_data = requests.get(thumb_url)
+            with open(f"{WORKDIR}/audio.jpg", "wb") as f:
+                f.write(thumb_data.content)
+                
+            print("🎉 Media download complete.")
+            return True
+        else:
+            print(f"❌ Cobalt Error: {result.get('text', 'Unknown error')}")
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"💥 Cobalt Request failed: {e}")
+        sys.exit(1)
 
 def main():
     token = get_yt_token()
