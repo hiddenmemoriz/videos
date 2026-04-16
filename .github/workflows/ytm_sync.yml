@@ -1,0 +1,32 @@
+name: YouTube Music Sync
+
+on:
+  workflow_dispatch: # Allows you to run it manually for testing
+
+jobs:
+  fetch-playlist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ytmusicapi
+        run: pip install ytmusicapi
+
+      - name: Apply Hotfix for YTM Bug
+        # This line does exactly what you did with 'nano'—it adds the missing field to the library
+        run: |
+          FILE_PATH=$(python -c "import ytmusicapi.auth.oauth.token as t; print(t.__file__)")
+          sed -i '/expires_in: int = 0/a \    refresh_token_expires_in: int = 0' "$FILE_PATH"
+
+      - name: Run Script
+        env:
+          YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
+          YTM_CLIENT_ID: ${{ secrets.YTM_CLIENT_ID }}
+          YTM_CLIENT_SECRET: ${{ secrets.YTM_CLIENT_SECRET }}
+        run: python get_playlist.py
