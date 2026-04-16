@@ -7,7 +7,7 @@ import sys
 PLAYLIST_ID = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
 # You can also pass this as an argument: python remove_item.py VIDEO_ID
 TARGET_VIDEO_ID = sys.argv[1] if len(sys.argv) > 1 else "-oIMyMEvMLI"
-API_KEY = "AIzaSy..." # <--- PASTE YOUR API KEY HERE
+API_KEY = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30" # <--- PASTE YOUR API KEY HERE
 
 def get_fresh_access_token():
     print("Refreshing access token...")
