@@ -5,17 +5,12 @@ import sys
 
 # --- CONFIGURATION ---
 PLAYLIST_ID = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
-# You can also pass this as an argument: python remove_item.py VIDEO_ID
 TARGET_VIDEO_ID = sys.argv[1] if len(sys.argv) > 1 else "-oIMyMEvMLI"
-API_KEY = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30" # <--- PASTE YOUR API KEY HERE
+API_KEY = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30" # <--- ENSURE THIS IS YOUR KEY FROM BROWSER
 
 def get_fresh_access_token():
-    print("Refreshing access token...")
     try:
-        # Load the full JSON secret
         oauth_data = json.loads(os.environ['YTM_OAUTH_JSON'])
-        
-        # Google's OAuth2 endpoint
         url = "https://oauth2.googleapis.com/token"
         payload = {
             "client_id": os.environ['YTM_CLIENT_ID'],
@@ -23,13 +18,25 @@ def get_fresh_access_token():
             "refresh_token": oauth_data['refresh_token'],
             "grant_type": "refresh_token"
         }
-        
-        response = requests.post(url, data=payload)
-        response.raise_for_status()
-        return response.json().get('access_token')
+        r = requests.post(url, data=payload)
+        return r.json().get('access_token')
     except Exception as e:
-        print(f"Failed to refresh token: {e}")
+        print(f"Token Refresh Error: {e}")
         return None
+
+def find_set_video_id(data, target_vid):
+    """Recursively search the entire JSON for the videoId and return its setVideoId."""
+    if isinstance(data, dict):
+        if data.get('videoId') == target_vid and 'setVideoId' in data:
+            return data['setVideoId']
+        for v in data.values():
+            result = find_set_video_id(v, target_vid)
+            if result: return result
+    elif isinstance(data, list):
+        for item in data:
+            result = find_set_video_id(item, target_vid)
+            if result: return result
+    return None
 
 def remove_track():
     token = get_fresh_access_token()
@@ -41,59 +48,41 @@ def remove_track():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
-    # Internal YouTube Music Context
-    context = {
-        "context": {
-            "client": {
-                "clientName": "WEB_REMIX",
-                "clientVersion": "1.20240410.01.00"
-            }
-        }
-    }
+    context = {"context": {"client": {"clientName": "WEB_REMIX", "clientVersion": "1.20240410.01.00"}}}
 
     # STEP 1: Find the setVideoId
-    print(f"Searching for track {TARGET_VIDEO_ID} in playlist...")
+    print(f"Searching for track {TARGET_VIDEO_ID}...")
     browse_url = f"https://music.youtube.com/youtubei/v1/browse?key={API_KEY}"
-    browse_payload = {**context, "browseId": f"VL{PLAYLIST_ID}"}
     
-    r = requests.post(browse_url, json=browse_payload, headers=headers)
+    # Use the 'VL' prefix for playlist IDs in the raw API
+    clean_playlist_id = PLAYLIST_ID if PLAYLIST_ID.startswith("VL") else f"VL{PLAYLIST_ID}"
     
-    set_video_id = None
-    try:
-        # Deep dive into the YouTube response to find the hidden ID
-        results = r.json()['contents']['singleColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['musicPlaylistShelfRenderer']['contents']
-        for item in results:
-            data = item.get('musicResponsiveListItemRenderer', {}).get('playlistItemData', {})
-            if data.get('videoId') == TARGET_VIDEO_ID:
-                set_video_id = data.get('setVideoId')
-                break
-    except Exception as e:
-        print(f"Error parsing playlist contents: {e}")
+    r = requests.post(browse_url, json={**context, "browseId": clean_playlist_id}, headers=headers)
+    
+    if r.status_code != 200:
+        print(f"Browse failed: {r.status_code} - {r.text}")
         return
+
+    # Deep Search for the ID
+    set_video_id = find_set_video_id(r.json(), TARGET_VIDEO_ID)
 
     if not set_video_id:
-        print("Track not found. (It might have been removed already)")
+        print("Track not found. If the list is empty or private, check your Scopes.")
         return
 
-    # STEP 2: Execute the Removal
+    # STEP 2: Execute Removal
     print(f"Found setVideoId: {set_video_id}. Removing...")
     edit_url = f"https://music.youtube.com/youtubei/v1/browse/edit_playlist?key={API_KEY}"
     edit_payload = {
         **context,
-        "playlistId": PLAYLIST_ID,
-        "actions": [
-            {
-                "action": "ACTION_REMOVE_VIDEO",
-                "setVideoId": set_video_id
-            }
-        ]
+        "playlistId": PLAYLIST_ID.replace("VL", ""), # Removal usually wants the ID without VL
+        "actions": [{"action": "ACTION_REMOVE_VIDEO", "setVideoId": set_video_id}]
     }
     
     final_res = requests.post(edit_url, json=edit_payload, headers=headers)
-    if final_res.status_code == 200:
-        print("Successfully removed track from playlist!")
-    else:
-        print(f"Failed to remove. Status: {final_res.status_code}, Body: {final_res.text}")
+    print(f"Done. Status: {final_res.status_code}")
+    if "ACTIONS_SUCCESS" in final_res.text:
+        print("Successfully removed!")
 
 if __name__ == "__main__":
     remove_track()
