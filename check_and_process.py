@@ -44,10 +44,16 @@ def download_media(video_id):
     print(f"📡 Requesting Cobalt bridge for {video_id}...")
     os.makedirs(WORKDIR, exist_ok=True)
     
-    API_URL = "https://cobalt.tools/api/json" 
+    # We'll try a more direct API endpoint
+    API_URL = "https://api.cobalt.tools/api/json" 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    headers = {
+        "Accept": "application/json", 
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
     payload = {
         "url": youtube_url,
         "downloadMode": "audio",
@@ -56,21 +62,27 @@ def download_media(video_id):
     }
 
     try:
-        # 1. Get link from Cobalt
         response = requests.post(API_URL, json=payload, headers=headers)
+        
+        # Check if the status code is healthy before parsing JSON
+        if response.status_code != 200:
+            print(f"❌ Cobalt API returned Status {response.status_code}")
+            print(f"Raw Response: {response.text}")
+            sys.exit(1)
+
         result = response.json()
 
-        if response.status_code == 200 and result.get("status") in ["stream", "redirect", "tunnel"]:
+        if result.get("status") in ["stream", "redirect", "tunnel"]:
             download_url = result.get("url")
             print(f"✅ Bridge opened: {download_url}")
             
-            # 2. Download MP3
+            # Download the MP3
             audio_data = requests.get(download_url, stream=True)
             with open(f"{WORKDIR}/audio.mp3", "wb") as f:
                 for chunk in audio_data.iter_content(chunk_size=8192):
                     f.write(chunk)
             
-            # 3. Get Thumbnail
+            # Fetch Thumbnail (Directly from Google/YouTube CDN)
             thumb_url = f"https://i3.ytimg.com/vi/{video_id}/maxresdefault.jpg"
             thumb_data = requests.get(thumb_url)
             with open(f"{WORKDIR}/audio.jpg", "wb") as f:
@@ -79,10 +91,14 @@ def download_media(video_id):
             print("🎉 Media download complete.")
             return True
         else:
-            print(f"❌ Cobalt Error: {result.get('text', 'Unknown error')}")
+            print(f"❌ Cobalt Error: {result.get('text', 'Unknown response state')}")
             sys.exit(1)
+
+    except json.decoder.JSONDecodeError:
+        print(f"💥 Failed to parse JSON. Server response was: {response.text}")
+        sys.exit(1)
     except Exception as e:
-        print(f"💥 Failed: {e}")
+        print(f"💥 Critical Error: {e}")
         sys.exit(1)
 
 def main():
