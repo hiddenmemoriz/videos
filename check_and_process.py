@@ -2,7 +2,6 @@ import os
 import requests
 import json
 import sys
-import yt_dlp
 
 # Constants
 NOTION_DB_ID = "31fb4e9c9ef68068b8edc379332d974f" 
@@ -41,19 +40,14 @@ def check_notion_entry(video_id):
     res = requests.post(url, json=payload, headers=headers).json()
     return len(res.get("results", [])) > 0
 
-def download_media(video_id, token):
+def download_media(video_id):
     print(f"📡 Requesting Cobalt bridge for {video_id}...")
     os.makedirs(WORKDIR, exist_ok=True)
     
-    # Public Cobalt instance API
     API_URL = "https://cobalt.tools/api/json" 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
     payload = {
         "url": youtube_url,
         "downloadMode": "audio",
@@ -62,7 +56,7 @@ def download_media(video_id, token):
     }
 
     try:
-        # 1. Get the download link from Cobalt
+        # 1. Get link from Cobalt
         response = requests.post(API_URL, json=payload, headers=headers)
         result = response.json()
 
@@ -70,16 +64,13 @@ def download_media(video_id, token):
             download_url = result.get("url")
             print(f"✅ Bridge opened: {download_url}")
             
-            # 2. Download the MP3
-            print("⏳ Downloading MP3...")
+            # 2. Download MP3
             audio_data = requests.get(download_url, stream=True)
             with open(f"{WORKDIR}/audio.mp3", "wb") as f:
                 for chunk in audio_data.iter_content(chunk_size=8192):
                     f.write(chunk)
             
-            # 3. Get the high-res Thumbnail (since Cobalt is primarily audio/video)
-            # We use the standard YouTube i3.ytimg link which is rarely IP blocked
-            print("🖼️ Fetching Thumbnail...")
+            # 3. Get Thumbnail
             thumb_url = f"https://i3.ytimg.com/vi/{video_id}/maxresdefault.jpg"
             thumb_data = requests.get(thumb_url)
             with open(f"{WORKDIR}/audio.jpg", "wb") as f:
@@ -90,32 +81,27 @@ def download_media(video_id, token):
         else:
             print(f"❌ Cobalt Error: {result.get('text', 'Unknown error')}")
             sys.exit(1)
-
     except Exception as e:
-        print(f"💥 Cobalt Request failed: {e}")
+        print(f"💥 Failed: {e}")
         sys.exit(1)
 
 def main():
     token = get_yt_token()
     item = get_first_item(token)
     if not item:
-        print("Playlist empty.")
         sys.exit(0)
 
     v_id = item['contentDetails']['videoId']
     title = item['snippet']['title']
     item_id = item['id']
 
-    print(f"Checking Item: {title} ({v_id})")
-    print(f"Playlist Item ID: {item_id}")
-
     if check_notion_entry(v_id):
-        print("MATCH FOUND: Skipping render.")
+        print("MATCH FOUND: Skipping.")
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
             f.write("exists=true\n")
     else:
-        print("NEW ENTRY: Starting download...")
-        download_media(v_id, token)
+        print("NEW ENTRY: Downloading...")
+        download_media(v_id)
         
         with open('video_data.json', 'w') as f:
             json.dump({"video_id": v_id, "title": title, "item_id": item_id}, f)
