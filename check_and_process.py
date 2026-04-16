@@ -3,14 +3,14 @@ import requests
 import json
 import sys
 
-# Your Notion Database ID from the URL
+# Constants from your Notion setup
 NOTION_DB_ID = "31fb4e9c9ef68068b8edc379332d974f" 
+# The UUID for the 'phonkstax' page in your Channel relation
+PHONKSTAX_PAGE_ID = "320b4e9c9ef680f3afaaee8b0450203a"
 
 def get_yt_token():
-    """Refreshes the YouTube OAuth token using Client ID, Secret, and Refresh Token."""
     url = "https://oauth2.googleapis.com/token"
     try:
-        # Parsing the JSON string stored in GitHub Secrets
         oauth_data = json.loads(os.environ['YTM_OAUTH_JSON'])
         payload = {
             "client_id": os.environ['YTM_CLIENT_ID'],
@@ -26,7 +26,6 @@ def get_yt_token():
         sys.exit(1)
 
 def get_first_item(token):
-    """Fetches the first item from your specific YouTube Music playlist."""
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {
         "part": "snippet,contentDetails",
@@ -38,12 +37,6 @@ def get_first_item(token):
     return r.get('items', [])[0] if r.get('items') else None
 
 def check_notion_entry(video_id):
-    """
-    Queries Notion with a filter for:
-    1. Video ID (Rich Text)
-    2. Type (Select) == 'Reel'
-    3. Channel (Relation) contains a page named 'phonkstax'
-    """
     url = f"https://api.notion.com/v1/databases/{NOTION_DB_ID}/query"
     headers = {
         "Authorization": f"Bearer {os.environ['NOTION_TOKEN']}",
@@ -51,6 +44,7 @@ def check_notion_entry(video_id):
         "Content-Type": "application/json"
     }
     
+    # Precise filter using the UUID for the Relation
     payload = {
         "filter": {
             "and": [
@@ -65,8 +59,7 @@ def check_notion_entry(video_id):
                 {
                     "property": "Channel",
                     "relation": {
-                        # Since Channel is a Relation, we check if it contains the page name
-                        "contains": "phonkstax" 
+                        "contains": PHONKSTAX_PAGE_ID
                     }
                 }
             ]
@@ -80,15 +73,12 @@ def check_notion_entry(video_id):
         print(f"Notion API Error: {res_data}")
         return False
         
-    # If results list has items, it means a duplicate exists
     return len(res_data.get("results", [])) > 0
 
 def main():
-    # 1. Get Authentication for YouTube
     yt_token = get_yt_token()
-    
-    # 2. Get the current track from the top of the Playlist
     item = get_first_item(yt_token)
+
     if not item:
         print("Playlist is empty.")
         sys.exit(0)
@@ -97,16 +87,13 @@ def main():
     item_id = item['id']
     title = item['snippet']['title']
 
-    # 3. Check Notion for existing entry with specific filters
     if check_notion_entry(v_id):
-        print(f"MATCH FOUND: '{title}' ({v_id}) is already logged as a Reel for phonkstax. Skipping.")
-        # Set GitHub Output to 'true' to signal a skip to the YAML
+        print(f"MATCH FOUND: '{title}' ({v_id}) already exists for phonkstax. Skipping.")
         if 'GITHUB_OUTPUT' in os.environ:
             with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                 f.write("exists=true\n")
     else:
-        print(f"PROCEEDING: '{title}' ({v_id}) is a new Reel entry for phonkstax.")
-        # Set GitHub Outputs for the next steps in the YAML workflow
+        print(f"PROCEEDING: '{title}' ({v_id}) is a new Reel for phonkstax.")
         if 'GITHUB_OUTPUT' in os.environ:
             with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
                 f.write("exists=false\n")
