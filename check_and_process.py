@@ -41,47 +41,49 @@ def check_notion_entry(video_id):
     return len(res.get("results", [])) > 0
 
 def download_media(video_id):
-    print(f"📡 Requesting Cobalt v10 bridge for {video_id}...")
+    print(f"📡 Requesting Open Cobalt bridge for {video_id}...")
     os.makedirs(WORKDIR, exist_ok=True)
     
-    # Updated v10 Endpoint
-    API_URL = "https://api.cobalt.tools/" 
+    # Using an open public instance that doesn't require JWT
+    API_URL = "https://cobalt.q69.it/" 
     youtube_url = f"https://www.youtube.com/watch?v={video_id}"
     
     headers = {
         "Accept": "application/json", 
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin": "https://cobalt.tools",
+        "Referer": "https://cobalt.tools/"
     }
     
-    # Updated v10 Payload Structure
     payload = {
         "url": youtube_url,
-        "videoQuality": "720",     # Required even for audio-only sometimes
+        "videoQuality": "720",
         "audioFormat": "mp3",
         "filenameStyle": "basic",
-        "downloadMode": "audio",   # Options: 'auto', 'audio', 'mute'
-        "youtubeVideoCodec": "h264"
+        "downloadMode": "audio",
+        "youtubeVideoCodec": "h264",
+        "noHttpreferer": True  # Helps with some instance restrictions
     }
 
     try:
         response = requests.post(API_URL, json=payload, headers=headers)
         
         if response.status_code != 200:
-            print(f"❌ Cobalt v10 returned Status {response.status_code}")
+            print(f"❌ Bridge returned Status {response.status_code}")
             print(f"Raw Response: {response.text}")
             sys.exit(1)
 
         result = response.json()
 
-        # v10 returns status "picker", "redirect", or "tunnel"
+        # Cobalt v10 success states
         if result.get("status") in ["redirect", "tunnel", "picker"]:
             download_url = result.get("url")
             print(f"✅ Bridge opened: {download_url}")
             
             # Download the MP3
             print("⏳ Downloading MP3...")
-            audio_data = requests.get(download_url, stream=True)
+            audio_data = requests.get(download_url, stream=True, timeout=60)
             with open(f"{WORKDIR}/audio.mp3", "wb") as f:
                 for chunk in audio_data.iter_content(chunk_size=8192):
                     f.write(chunk)
@@ -89,19 +91,21 @@ def download_media(video_id):
             # Fetch Thumbnail
             print("🖼️ Fetching Thumbnail...")
             thumb_url = f"https://i3.ytimg.com/vi/{video_id}/maxresdefault.jpg"
-            thumb_data = requests.get(thumb_url)
+            thumb_data = requests.get(thumb_url, timeout=20)
             with open(f"{WORKDIR}/audio.jpg", "wb") as f:
                 f.write(thumb_data.content)
                 
             print("🎉 Media download complete.")
             return True
         else:
-            print(f"❌ Cobalt v10 Error: {result.get('text', 'Unknown response state')}")
+            print(f"❌ Bridge Error: {result.get('text', 'Unknown response state')}")
             sys.exit(1)
 
     except Exception as e:
         print(f"💥 Critical Error: {e}")
         sys.exit(1)
+
+
 def main():
     token = get_yt_token()
     item = get_first_item(token)
