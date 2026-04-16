@@ -1,25 +1,16 @@
-name: YouTube Music JS Sync
+name: Manual YTM Fix
 
 on:
   workflow_dispatch:
 
 jobs:
-  ytm-js-task:
+  remove-item:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install ytmusicapi
-        run: npm install ytmusicapi
-
-      - name: Run Script
+      - name: Execute Raw API Call
         env:
-          # Make sure these match your GitHub Secrets exactly
           YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
-        run: node get_playlist.js
+        run: bash remove_item.sh
