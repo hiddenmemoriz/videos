@@ -3,22 +3,22 @@ name: Phonkstax Reel Engine
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *' # Check every hour
+    - cron: '0 * * * *'
 
 jobs:
   automation:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies
+      - name: Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg jq bc
-          pip install yt-dlp requests
+          python3 -m pip install -U yt-dlp requests --break-system-packages
 
-      - name: Run Python Logic (Notion Check & Media Download)
+      - name: Check & Download
         id: check
         env:
           YTM_CLIENT_ID: ${{ secrets.YTM_CLIENT_ID }}
@@ -27,15 +27,15 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: python check_and_process.py
 
-      - name: Execute FFmpeg Rendering
+      - name: Render
         if: steps.check.outputs.exists == 'false'
         run: |
           chmod +x render_reel.sh
           ./render_reel.sh
 
-      - name: Save Resulting Reel
+      - name: Artifact
         if: steps.check.outputs.exists == 'false'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.check.outputs.title }}-reel
+          name: ${{ steps.check.outputs.title }}
           path: output.mp4
