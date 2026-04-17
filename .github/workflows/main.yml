@@ -36,6 +36,9 @@ jobs:
           echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
 
       - name: 📥 Step 2 - Download & Cleanup Assets
+        env:
+          PIKPAK_USER: ${{ secrets.PIKPAK_USER }}
+          PIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
         run: python 2_download_video.py
 
       - name: 🔪 Step 3 - Split Audio & Image
