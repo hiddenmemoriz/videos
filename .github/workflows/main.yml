@@ -1,10 +1,10 @@
 name: Phonk Reel Automation
 
 permissions:
-  contents: write  # Crucial: Allows the bot to push metadata.json and videos
+  contents: write  # Allows the bot to push to any branch
 
 on:
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
 
 jobs:
   render-and-upload:
@@ -14,7 +14,7 @@ jobs:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history so push doesn't fail
+          fetch-depth: 0 
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -39,14 +39,14 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Use -f in case metadata.json is in .gitignore
           git add -f metadata.json
           
           if git diff --quiet && git diff --staged --quiet; then
             echo "No changes to metadata.json"
           else
             git commit -m "Update metadata for new track [skip ci]"
-            git push origin main
+            # DYNAMIC BRANCH PUSH: Works for main, beta, or any other branch
+            git push origin ${{ github.ref_name }}
           fi
 
       - name: 🛠️ Install System Dependencies
@@ -71,7 +71,6 @@ jobs:
 
       - name: 🎬 Step 4 - Render Video
         run: |
-          # Fresh output folder
           rm -rf output/
           mkdir -p output/
           bash 4_output.sh
@@ -80,8 +79,6 @@ jobs:
         env:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
-          # This script now handles the Force Push to save space 
-          # AND sends the URL to your Apps Script
           bash 5_webhook.sh
 
       - name: 📦 Archive Final Video (GitHub Artifact)
