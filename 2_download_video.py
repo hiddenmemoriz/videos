@@ -10,8 +10,14 @@ REMOTE = "mypikpak"
 REMOTE_PATH = "/Download/temp/"
 LOCAL_DIR = "./assets/download/"
 # Folders to wipe for a fresh start
-CLEAN_PATHS = ["./assets/download/", "./assets/audio/", "./assets/image/", "./assets/trim_audio/", "./output/"]
-
+# Updated CLEAN_PATHS to be safer
+CLEAN_PATHS = [
+    "./assets/download/", 
+    "./assets/audio/", 
+    "./assets/image/", 
+    "./assets/trim_audio/"
+    # Removed "./output/" and "./" to protect metadata.json
+]
 def run_cmd(args):
     return subprocess.run(args, capture_output=True, text=True)
 
