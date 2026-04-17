@@ -29,25 +29,24 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: python 1_Notion_check.py
 
-      - name: Step 2 - Download Video (PikPak Bridge)
-        env:
-          PIKPAK_USER: ${{ secrets.PIKPAK_USER }}
-          PIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
+      - name: Step 2 - Download
         run: |
-          # Only run if metadata.json was created in Step 1
-          if [ -f metadata.json ]; then
-            rclone config create mypikpak pikpak user "$PIKPAK_USER" pass "$PIKPAK_PASS"
-            python 2_download_video.py
-          else
-            echo "⏭️ Skipping Step 2: No new video to process."
-          fi
+          # 1. CLEAN FIRST (Before new download)
+          rm -rf ./assets/download/*
+          rm -rf ./assets/audio/*
+          rm -rf ./assets/image/*
+          
+          # 2. DOWNLOAD
+          python 2_download_video.py
 
-      - name: Step 3 - Audio & Image Splitter (FFmpeg)
+      - name: Step 3 - Split
         run: |
-          if [ -d ./assets/download ]; then
+          # Only run if a file exists
+          if [ "$(ls -A ./assets/download/)" ]; then
             bash 3_audio_image_splitter.sh
           else
-            echo "⏭️ Skipping Step 3: No video downloaded."
+            echo "❌ Download failed, skipping split."
+            exit 1
           fi
 
       - name: Step 4 - Commit Assets to Repo
