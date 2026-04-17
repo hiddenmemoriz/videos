@@ -9,83 +9,81 @@ import glob
 REMOTE = "mypikpak"
 REMOTE_PATH = "/Download/temp/"
 LOCAL_DIR = "./assets/download/"
-# Folders that must be emptied to prevent using old repo files
-CLEAN_PATHS = [
-    LOCAL_DIR, 
-    "./assets/audio/", 
-    "./assets/image/", 
-    "./assets/trim_audio/", # Added this to be safe
-    "./output/"
-]
+# Folders to wipe for a fresh start
+CLEAN_PATHS = ["./assets/download/", "./assets/audio/", "./assets/image/", "./assets/trim_audio/", "./output/"]
+
+def run_cmd(args):
+    return subprocess.run(args, capture_output=True, text=True)
 
 def download():
-    if not os.path.exists("metadata.json"): 
-        print("ℹ️ No metadata.json found.")
-        return
-
-    # 1. AGGRESSIVE CLEANUP
-    print("🧹 Wiping local asset folders to ensure fresh render...")
-    for folder in CLEAN_PATHS:
-        if os.path.exists(folder):
-            # Remove every file inside the folder
-            files = glob.glob(os.path.join(folder, "*"))
-            for f in files:
-                try:
-                    if os.path.isfile(f):
-                        os.remove(f)
-                        print(f"  🗑️ Deleted: {f}")
-                except Exception as e:
-                    print(f"  ⚠️ Could not delete {f}: {e}")
-        else:
-            # Create the folder if it doesn't exist
-            os.makedirs(folder, exist_ok=True)
-            print(f"  📁 Created: {folder}")
-    
+    # 1. Load Metadata from Step 1
+    if not os.path.exists("metadata.json"):
+        print("❌ Error: metadata.json not found. Did Step 1 fail?")
+        sys.exit(1)
+        
     with open("metadata.json", "r") as f:
         meta = json.load(f)
-
-    # 2. TRIGGER PIKPAK
-    print(f"📡 Requesting PikPak for: {meta['yt_url']}")
-    # Using 'addurl' to trigger the cloud download
-    cmd = ["rclone", "backend", "addurl", f"{REMOTE}:{REMOTE_PATH}", meta['yt_url']]
-    send_res = subprocess.run(cmd, capture_output=True, text=True)
     
-    if not send_res.stdout.strip():
-        print(f"❌ Rclone returned empty response. Error: {send_res.stderr}")
-        sys.exit(1)
+    VIDEO_URL = meta['yt_url']
 
+    # 2. Cleanup (Wipe folders, but KEEP metadata.json in root)
+    print("🧹 Cleaning local asset folders...")
+    for folder in CLEAN_PATHS:
+        os.makedirs(folder, exist_ok=True)
+        for f in glob.glob(os.path.join(folder, "*")):
+            try: os.remove(f)
+            except: pass
+
+    # 3. Trigger PikPak
+    print(f"📡 Dispatching Cloud Request for: {VIDEO_URL}")
+    run_cmd(["rclone", "mkdir", f"{REMOTE}:{REMOTE_PATH}"])
+    send_res = run_cmd(["rclone", "backend", "addurl", f"{REMOTE}:{REMOTE_PATH}", VIDEO_URL])
+    
     try:
         task_data = json.loads(send_res.stdout)
         file_name = task_data.get("file_name")
-        if not file_name:
-            raise ValueError("No file_name in response")
-    except (json.JSONDecodeError, ValueError) as e:
-        print(f"❌ Failed to parse task data. Raw: {send_res.stdout}")
+        print(f"✅ Target Locked: {file_name}")
+    except:
+        print(f"❌ PikPak Error: {send_res.stderr or send_res.stdout}")
         sys.exit(1)
 
-    # 3. POLL AND COPY
-    print(f"⏳ Waiting for cloud completion: {file_name}...")
-    # 60 attempts * 10 seconds = 10 minute timeout
-    for i in range(60):
-        list_cmd = subprocess.run(["rclone", "lsf", f"{REMOTE}:{REMOTE_PATH}"], capture_output=True, text=True)
+    # 4. Polling Loop (Your old logic + spinner)
+    print(f"⏳ Waiting for Cloud Muxing...")
+    spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    
+    for i in range(120):
+        symbol = spinner[i % len(spinner)]
+        list_cmd = run_cmd(["rclone", "lsf", f"{REMOTE}:{REMOTE_PATH}"])
         
         if file_name in list_cmd.stdout:
-            print(f"✅ Cloud download finished! Pulling to {LOCAL_DIR}...")
-            # Use copyto to ensure the filename is exactly what we expect
-            target_local = os.path.join(LOCAL_DIR, file_name)
-            subprocess.run(["rclone", "copyto", f"{REMOTE}:{REMOTE_PATH}{file_name}", target_local])
-            
-            if os.path.exists(target_local):
-                print(f"🎉 Successfully pulled: {target_local}")
-                return
-            else:
-                print("❌ Copy failed.")
-                sys.exit(1)
-                
-        time.sleep(10)
+            # Check if file size is > 0 (stitching check)
+            size_cmd = run_cmd(["rclone", "lsjson", f"{REMOTE}:{REMOTE_PATH}{file_name}"])
+            try:
+                size_data = json.loads(size_cmd.stdout)[0]
+                if size_data.get("Size", 0) > 1000:
+                    print(f"\n✨ FILE READY! Size: {size_data['Size']/1024/1024:.2f} MB")
+                    break
+            except: pass
+            print(f"\r{symbol} [{i*5}s] File detected, stitching audio/video...", end="")
+        else:
+            print(f"\r{symbol} [{i*5}s] PikPak is fetching from YouTube...", end="")
+        
+        sys.stdout.flush()
+        time.sleep(5)
+    else:
+        print("\n⏰ Timeout waiting for PikPak.")
+        sys.exit(1)
+
+    # 5. Pull to Runner
+    dest_path = os.path.join(LOCAL_DIR, file_name)
+    print(f"🚀 Pulling file to GitHub Runner...")
+    run_cmd(["rclone", "copyto", f"{REMOTE}:{REMOTE_PATH}{file_name}", dest_path])
     
-    print("⏰ Timeout waiting for PikPak.")
-    sys.exit(1)
+    if os.path.exists(dest_path):
+        print(f"🏆 MISSION ACCOMPLISHED: {dest_path}")
+    else:
+        print("❌ Download failed.")
+        sys.exit(1)
 
 if __name__ == "__main__":
     download()
