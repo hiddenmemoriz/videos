@@ -35,6 +35,7 @@ jobs:
         run: |
           # This script is a BASH script, so we MUST use 'bash'
           # If you use 'python' here, it will crash with a SyntaxError
+          ls -l ./assets/trim_audio/trim_audio.mp3
           bash 4_output.sh
           
       - name: Upload Test Result
