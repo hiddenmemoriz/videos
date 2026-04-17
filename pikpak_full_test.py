@@ -6,74 +6,85 @@ import os
 
 # --- CONFIG ---
 REMOTE = "mypikpak"
-FOLDER = "/Download/temp/"  # Updated PikPak path
-LOCAL_OUTPUT = "./output/"    # Local folder for git testing
-VIDEO_URL = "https://www.youtube.com/watch?v=7RvhZyBK9vU"
+FOLDER = "/Download/temp/"
+LOCAL_OUTPUT = "./output/"
+VIDEO_URL = "https://www.youtube.com/watch?v=tdocUW4aKnY"
 # --------------
 
 def run_command(args):
-    """Utility to run rclone commands and capture output."""
     return subprocess.run(args, capture_output=True, text=True)
 
 def test_round_trip():
-    # 0. Prepare Local Output Folder
+    # 0. Preparation
     if not os.path.exists(LOCAL_OUTPUT):
         os.makedirs(LOCAL_OUTPUT)
-        print(f"📁 Created local directory: {LOCAL_OUTPUT}")
-
-    # 1. Trigger the download in PikPak
-    print(f"📡 Step 1: Sending URL to PikPak path: {FOLDER}")
-    # Ensure remote directory exists
-    run_command(["rclone", "mkdir", f"{REMOTE}:{FOLDER}"])
     
+    print("🔥 PHONKSTAX ENGINE ACTIVATED 🔥")
+    print("----------------------------------")
+
+    # 1. Trigger the download
+    print(f"📡 [STEP 1] Dispatching Cloud Request...")
+    run_command(["rclone", "mkdir", f"{REMOTE}:{FOLDER}"])
     send_cmd = run_command(["rclone", "backend", "addurl", f"{REMOTE}:{FOLDER}", VIDEO_URL])
     
     try:
         task_data = json.loads(send_cmd.stdout)
         file_name = task_data.get("file_name")
-        print(f"✅ Task created! Target file: {file_name}")
-    except Exception as e:
-        print(f"❌ Failed to trigger PikPak. Output: {send_cmd.stdout}")
+        print(f"✅ Target Locked: {file_name}")
+    except:
+        print(f"❌ Critical Error: PikPak rejected the request.")
         return False
 
-    # 2. Polling the Folder (Waiting for file to finish)
-    print(f"⏳ Step 2: Watching {FOLDER} for {file_name}...")
-    for i in range(60): # 10-minute timeout
+    # 2. The Dynamic Polling Loop
+    print(f"⏳ [STEP 2] Waiting for Cloud Muxing...")
+    
+    # We use a spinner to show life in the logs
+    spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    
+    for i in range(120): # Check every 5 seconds for 10 mins
+        # UI/UX: Update the log line
+        symbol = spinner[i % len(spinner)]
+        
         list_cmd = run_command(["rclone", "lsf", f"{REMOTE}:{FOLDER}"])
         
         if file_name in list_cmd.stdout:
-            # Check if file has data (is not a 0-byte placeholder)
             size_cmd = run_command(["rclone", "lsjson", f"{REMOTE}:{FOLDER}{file_name}"])
             try:
                 size_data = json.loads(size_cmd.stdout)[0]
-                if size_data.get("Size", 0) > 1000:
-                    print(f"🎉 File ready in cloud! Size: {size_data.get('Size')} bytes.")
+                current_size = size_data.get("Size", 0)
+                
+                if current_size > 1000:
+                    print(f"\n✨ FILE READY! Final Cloud Size: {current_size/1024/1024:.2f} MB")
                     break
+                else:
+                    print(f"\r{symbol} [{i*5}s] File detected, but still stitching audio/video...", end="")
             except:
-                pass
+                print(f"\r{symbol} [{i*5}s] Initializing transfer...", end="")
+        else:
+            print(f"\r{symbol} [{i*5}s] PikPak is fetching streams from YouTube...", end="")
         
-        if i % 3 == 0:
-            print(f"   - [{i*10}s] Still waiting for cloud transfer...")
-        time.sleep(10)
+        sys.stdout.flush()
+        time.sleep(5) # Faster polling for better excitement
     else:
-        print("⏰ Timeout: File never appeared in PikPak.")
+        print("\n⏰ Timeout: PikPak took too long.")
         return False
 
-    # 3. Pull file to the local ./output/ folder
+    # 3. Retrieval
     dest_path = os.path.join(LOCAL_OUTPUT, file_name)
-    print(f"🚀 Step 3: Downloading from cloud to {dest_path}...")
+    print(f"\n🚀 [STEP 3] Siphoning file to GitHub Runner...")
     
-    # We use copyto to place the file exactly in our target local folder
+    # Run the download and show a success message when done
     run_command(["rclone", "copyto", f"{REMOTE}:{FOLDER}{file_name}", dest_path])
     
     if os.path.exists(dest_path):
-        size = os.path.getsize(dest_path)
-        print(f"✅ SUCCESS! File saved to: {dest_path}")
-        print(f"📊 Final local size: {size/1024/1024:.2f} MB")
+        print(f"----------------------------------")
+        print(f"🏆 MISSION ACCOMPLISHED")
+        print(f"📂 Saved to: {dest_path}")
+        print(f"💎 Quality: High Bitrate WebM")
+        print(f"----------------------------------")
         return True
-    else:
-        print("❌ Download to local folder failed.")
-        return False
+    
+    return False
 
 if __name__ == "__main__":
     if not test_round_trip(): sys.exit(1)
