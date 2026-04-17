@@ -65,19 +65,39 @@ jobs:
       - name: 🔉 Step 3.5 - Extract Best Part
         run: python 3.5_trim_audio.py
 
-      - name: 🎬 Step 4 - Render & Webhook
+      - name: 🎬 Step 4 - Render Video
+        run: |
+          rm -rf output/
+          mkdir -p output/
+          bash 4_output.sh
+
+      - name: 🚀 Step 5 - Webhook Upload
         env:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
-          # 1. CLEAN OUTPUT FOLDER: Ensure no old renders exist
-          rm -rf output/
-          mkdir -p output/
-          
-          # 2. RUN RENDER: This will create the new artist_-_track.mp4
-          bash 4_output.sh
+          # Only runs if Step 4 succeeded
+          bash 5_webhook.sh
 
       - name: 📦 Archive Final Video (Backup)
+        if: always() # Still uploads to GitHub even if webhook fails
         uses: actions/upload-artifact@v4
         with:
           name: generated-reels
           path: output/
+
+      - name: 📝 Commit and Push Metadata
+        run: |
+          # 1. Configure Git
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 2. Stage the file
+          git add metadata.json
+          
+          # 3. Commit only if there are changes
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to metadata.json"
+          else
+            git commit -m "Update metadata.json for new track [skip ci]"
+            git push
+          fi
