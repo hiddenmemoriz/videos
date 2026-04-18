@@ -7,7 +7,7 @@ import glob
 
 # --- CONFIG ---
 REMOTE = "mypikpak"
-REMOTE_PATH = "/Download/temp/"
+REMOTE_PATH = "Download/temp/"
 LOCAL_DIR = "./assets/download/"
 CLEAN_PATHS = [
     "./assets/download/", 
@@ -89,9 +89,9 @@ def download():
         if file_name in run_cmd(["rclone", "lsf", f"{REMOTE}:{REMOTE_PATH}"]).stdout:
             size_cmd = run_cmd(["rclone", "lsjson", f"{REMOTE}:{REMOTE_PATH}{file_name}"])
             try:
-                size = json.loads(size_cmd.stdout)[0].get("Size", 0)
-                if size > 1000:
-                    print(f"\n✨ READY: {size/1024/1024:.2f} MB")
+                size_list = json.loads(size_cmd.stdout)
+                if size_list and size_list[0].get("Size", 0) > 1000:
+                    print(f"\n✨ READY: {size_list[0]['Size']/1024/1024:.2f} MB")
                     break
             except: pass
         print(f"\r{symbol} [{i*5}s] Processing...", end="")
@@ -105,14 +105,13 @@ def download():
     
     if os.path.exists(dest_path):
         print(f"🏆 Downloaded: {dest_path}")
-        
-        # --- THE FIX FOR STEP 8 ---
-        # Update metadata with the exact cloud filename
-meta['cloud_file_name'] = file_name
-with open("metadata.json", "w") as f:
-    json.dump(meta, f, indent=4)
+        # Save exact filename to metadata so Step 8 knows what to delete
+        meta['cloud_file_name'] = file_name
+        with open("metadata.json", "w") as f:
+            json.dump(meta, f, indent=4)
         print(f"📝 Cloud filename saved for cleanup.")
     else:
+        print("❌ Download failed.")
         sys.exit(1)
 
 if __name__ == "__main__":
