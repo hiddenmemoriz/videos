@@ -89,12 +89,12 @@ def main():
     if not token: 
         sys.exit(1)
 
-    # 1. Fetch Top 3 Items from Playlist (1 for Action, 2 for Warm-up)
+    # 1. Fetch Top 2 Items from Playlist (1 for Action, 1 for Warm-up)
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {
         "part": "snippet,contentDetails", 
         "playlistId": PLAYLIST_ID, 
-        "maxResults": 3
+        "maxResults": 2
     }
     r = requests.get(url, params=params, headers={"Authorization": f"Bearer {token}"}).json()
     
