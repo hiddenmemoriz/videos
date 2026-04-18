@@ -4,6 +4,7 @@ import subprocess
 import sys
 
 def cleanup():
+    # Load metadata to get the filename we just processed
     if not os.path.exists("metadata.json"):
         print("❌ Metadata missing, cleanup skipped.")
         return
@@ -22,6 +23,7 @@ def cleanup():
     print(f"🗑️ Deleting processed file from PikPak: {file_name}")
     
     # Run rclone delete
+    # This keeps your warm-up files safe because it targets only this specific file
     cmd = ["rclone", "delete", f"{remote_name}:{remote_path}{file_name}"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
