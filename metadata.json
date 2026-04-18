@@ -4,5 +4,9 @@
     "track": "BRXKE",
     "video_id": "0VtHOl3C98o",
     "playlist_item_id": "UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci4zMkY2MjA3RDJERTkxNjkz",
-    "yt_url": "https://www.youtube.com/watch?v=0VtHOl3C98o"
+    "yt_url": "https://www.youtube.com/watch?v=0VtHOl3C98o",
+    "prefetch_urls": [
+        "https://www.youtube.com/watch?v=pBWn0OqzwTg",
+        "https://www.youtube.com/watch?v=TqzaxxlOiyg"
+    ]
 }
