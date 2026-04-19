@@ -9,6 +9,16 @@ OUT_DIR="./output"
 
 mkdir -p "$OUT_DIR"
 
+# --- CLEAN OUTPUT FOLDER ---
+# 1. Remove all existing files in the output directory
+rm -rf ./output/*
+
+# 2. Re-create the folder (if it was deleted) and move/save the new video back
+# (Assuming your generation script puts the new file back in ./output/)
+
+# 3. Sync the local deletion to Git so the repo also stays clean
+git add -A
+
 # 2. READ METADATA FOR FILENAME
 if [ -f "$METADATA" ]; then
     ARTIST=$(jq -r '.artist // "Artist"' "$METADATA" | tr ' ' '_')
