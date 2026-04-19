@@ -48,7 +48,7 @@ ffmpeg -y \
 crop=min(iw\,ih):min(iw\,ih),
 scale=800:800[cover];
 
-# --- BACKGROUND (blur + smooth shake, stable)
+# --- BACKGROUND (blur + shake, stable)
 [0:v]format=yuv420p,
 crop=min(iw\,ih):min(iw\,ih),
 scale=1920:1080:force_original_aspect_ratio=increase,
