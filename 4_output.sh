@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- CONFIG ---
-AUDIO="./assets/trim_audio/trim_audio.mp3"
+AUDIO="./assets/audio/audio.mp3"
 IMAGE="./assets/image/image.jpg"
 LOGO="./assets/spotify.png"
 METADATA="metadata.json"
