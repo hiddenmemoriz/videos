@@ -1,0 +1,32 @@
+name: Download Cloudinary Videos
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download videos
+        run: |
+          curl -L "https://res.cloudinary.com/dzyu80zzc/video/upload/q_auto/f_auto/v1776831220/3_x6njl0.mp4" -o ./assets/scratches/3.mp4
+          curl -L "https://res.cloudinary.com/dzyu80zzc/video/upload/q_auto/f_auto/v1776831207/2_hescxv.mp4" -o ./assets/scratches/2.mp4
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+      - name: Commit changes
+        run: |
+          git add assets/scratches/
+          git commit -m "Update scratch videos" || echo "No changes"
+
+      - name: Push to repo
+        run: |
+          git push
