@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
 
+permissions:
+  contents: write
+
 jobs:
   download:
     runs-on: ubuntu-latest
@@ -20,13 +23,13 @@ jobs:
       - name: Configure Git
         run: |
           git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config user.email "github-actions@github.com"
 
       - name: Commit changes
         run: |
           git add assets/scratches/
           git commit -m "Update scratch videos" || echo "No changes"
 
-      - name: Push to repo
+      - name: Push changes
         run: |
           git push
