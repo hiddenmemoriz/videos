@@ -80,8 +80,9 @@ jobs:
 
       - name: 🎬 Step 4 - Render Video
         run: |
-            rm -rf output/
-              bash 4_output.sh
+          rm -rf output/
+          git add -A
+          bash 4_output.sh
 
       - name: 🚀 Step 5 - Webhook & Force Push Video
         env:
