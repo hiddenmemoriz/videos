@@ -1,6 +1,7 @@
 #!/bin/bash
+set -e
 
-# --- 1. SETUP FILENAMES ---
+# --- 1. GET FILE ---
 OUT_FILE=$(ls ./output/*.mp4 2>/dev/null | head -n 1)
 
 if [ ! -f "$OUT_FILE" ]; then
@@ -11,44 +12,51 @@ fi
 URL_FILENAME=$(basename "$OUT_FILE")
 SAFE_NAME="${URL_FILENAME%.*}"
 
-# --- 2. GITHUB UPLOAD (FORCE PUSH) ---
-echo "-----------------------------------------------"
-echo "📤 UPLOADING TO GITHUB REPO..."
+# --- 2. GIT SETUP ---
+echo "📤 Uploading to GitHub..."
 
 git config --global user.name "github-actions[bot]"
 git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-echo "🌿 Detected branch: $CURRENT_BRANCH"
+echo "🌿 Branch: $CURRENT_BRANCH"
 
-# Clean output except the current reel
+# --- 3. CLEAN OLD FILES ---
 find ./output -type f ! -name "$URL_FILENAME" -delete
 
-# Force add in case they are in gitignore
-git add -f "$OUT_FILE"
-git add -f metadata.json
+# --- 4. STAGE PROPERLY (IMPORTANT) ---
+git add -A output/
+git add metadata.json
 
+# --- 5. COMMIT ONLY IF CHANGES ---
+if git diff --cached --quiet; then
+    echo "No changes to commit"
+else
+    git commit -m "🎬 Reel: $SAFE_NAME [skip ci]"
+    git push origin "$CURRENT_BRANCH" --force
+fi
+
+# --- 6. RAW URL ---
 RAW_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CURRENT_BRANCH}/output/${URL_FILENAME}"
 
-echo "⚙️ Force pushing to $CURRENT_BRANCH..."
-# FIX: Added quotes and ensured the [skip ci] is inside the commit message string
-git commit -m "Refresh Reel: $SAFE_NAME [skip ci]" || git commit --amend --no-edit
-git push origin "$CURRENT_BRANCH" --force
-
-# --- 3. WEBHOOK CALL ---
+# --- 7. WEBHOOK ---
 if [ -n "$WEBHOOK_URL" ]; then
-    echo "⏳ Waiting 5 seconds for GitHub sync..."
+    echo "⏳ Waiting for GitHub sync..."
     sleep 5
 
-    echo "📡 Sending Webhook: $URL_FILENAME"
-    
-    # Generate JSON payload
-    PAYLOAD=$(jq -n --arg url "$RAW_URL" --arg name "$URL_FILENAME" \
+    echo "📡 Sending webhook..."
+
+    PAYLOAD=$(jq -n \
+        --arg url "$RAW_URL" \
+        --arg name "$URL_FILENAME" \
         '{fileUrl: $url, fileName: $name}')
 
-    RESPONSE=$(curl -L -s -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL")
-    
-    echo "📩 Server Response: $RESPONSE"
-    echo -e "\n✨ Process Complete."
+    RESPONSE=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -d "$PAYLOAD" \
+        "$WEBHOOK_URL")
+
+    echo "📩 Response: $RESPONSE"
 fi
-echo "-----------------------------------------------"
+
+echo "✅ Done"
