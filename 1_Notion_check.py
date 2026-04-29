@@ -10,14 +10,25 @@ NOTION_PAGE_ID = os.environ.get('NOTION_PAGE_ID')
 YT_PLAYLIST_ID = os.environ.get('YT_PLAYLIST_ID')
 NOTION_TOKEN = os.environ.get('NOTION_TOKEN')
 
+# --- CLEAN FUNCTION ---
 def clean_name(text):
-    """Cleans 'Topic' and 'Release' noise from YouTube titles."""
+    text = text or ""
+
+    # Remove YouTube noise
     text = re.sub(r'\s*[-–—]\s*Topic\s*$', '', text, flags=re.IGNORECASE)
     text = re.sub(r'^Release\s*[-–—]?\s*', '', text, flags=re.IGNORECASE)
+
+    # Remove invalid filename characters
+    text = re.sub(r'[\\/*?:"<>|]', '', text)
+
+    # 🚨 FIX: remove leading dots (prevents hidden files)
+    text = re.sub(r'^\.+', '', text)
+
     return text.strip()
 
+
+# --- YOUTUBE AUTH ---
 def get_yt_token():
-    """Refreshes the YouTube OAuth2 access token."""
     url = "https://oauth2.googleapis.com/token"
     try:
         oauth_data = json.loads(os.environ['YTM_OAUTH_JSON'])
@@ -34,26 +45,28 @@ def get_yt_token():
         print(f"❌ YouTube Auth Error: {e}")
         return None
 
+
+# --- DELETE PLAYLIST ITEM ---
 def delete_playlist_item(token, playlist_item_id):
-    """Removes the processed/duplicate item from the YouTube playlist."""
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     headers = {"Authorization": f"Bearer {token}"}
     params = {"id": playlist_item_id}
     
-    print(f"🗑️ Attempting to delete playlist item: {playlist_item_id}...")
+    print(f"🗑️ Deleting playlist item: {playlist_item_id}...")
     try:
         response = requests.delete(url, headers=headers, params=params)
         if response.status_code == 204:
-            print("✅ Successfully deleted from YouTube Playlist.")
+            print("✅ Deleted from playlist")
         else:
-            print(f"⚠️ Delete failed. Status: {response.status_code}")
+            print(f"⚠️ Delete failed: {response.status_code}")
     except Exception as e:
-        print(f"❌ Error during deletion: {e}")
+        print(f"❌ Delete error: {e}")
 
+
+# --- CHECK NOTION ---
 def check_notion_entry(video_id):
-    """Checks Notion to see if this Video ID exists as a Reel."""
     if not NOTION_DB_ID or not NOTION_PAGE_ID or not NOTION_TOKEN:
-        print("❌ Error: Notion configuration secrets are missing.")
+        print("❌ Missing Notion config")
         return False
 
     url = f"https://api.notion.com/v1/databases/{NOTION_DB_ID}/query"
@@ -62,6 +75,7 @@ def check_notion_entry(video_id):
         "Notion-Version": "2022-06-28",
         "Content-Type": "application/json"
     }
+
     payload = {
         "filter": {
             "and": [
@@ -71,79 +85,85 @@ def check_notion_entry(video_id):
             ]
         }
     }
-    
+
     try:
         response = requests.post(url, json=payload, headers=headers)
         res_data = response.json()
         return len(res_data.get("results", [])) > 0
     except Exception as e:
-        print(f"⚠️ Notion Check failed: {e}")
+        print(f"⚠️ Notion check failed: {e}")
         return False
 
+
+# --- MAIN ---
 def main():
     if not YT_PLAYLIST_ID:
-        print("❌ Error: YT_PLAYLIST_ID secret is missing.")
+        print("❌ Missing playlist ID")
         sys.exit(1)
 
     token = get_yt_token()
-    if not token: 
+    if not token:
         sys.exit(1)
 
-    # 1. Fetch Top 2 Items (1 for Active, 1 for Pre-fetch)
+    # Fetch playlist items
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {
-        "part": "snippet,contentDetails", 
-        "playlistId": YT_PLAYLIST_ID, 
-        "maxResults": 2 
+        "part": "snippet,contentDetails",
+        "playlistId": YT_PLAYLIST_ID,
+        "maxResults": 2
     }
+
     r = requests.get(url, params=params, headers={"Authorization": f"Bearer {token}"}).json()
-    
     items = r.get('items', [])
+
     if not items:
-        print("❌ Playlist is empty.")
+        print("❌ Playlist empty")
         sys.exit(1)
 
-    # 2. Setup Active Item (Item #1)
+    # Active item
     active_item = items[0]
-    playlist_item_id = active_item.get('id') 
+    playlist_item_id = active_item.get('id')
     vid_id = active_item['contentDetails']['videoId']
-    
-    # 3. Check Notion for Active Item
+
+    # Check Notion
     if check_notion_entry(vid_id):
-        print(f"🚩 MATCH FOUND: {vid_id} is already in Notion.")
+        print(f"🚩 Duplicate found: {vid_id}")
         delete_playlist_item(token, playlist_item_id)
-        print("⏩ Stopping workflow. Duplicate removed from playlist.")
         sys.exit(1)
 
-    # 4. Collect 1 Pre-fetch URL (Item #2)
+    # Prefetch next
     prefetch_urls = []
     if len(items) > 1:
         next_vid_id = items[1]['contentDetails']['videoId']
         prefetch_urls.append(f"https://www.youtube.com/watch?v={next_vid_id}")
-        print(f"⚡ Queueing 1 URL for background pre-fetching: {next_vid_id}")
+        print(f"⚡ Prefetch queued: {next_vid_id}")
 
-    # 5. Process Metadata
-    raw_artist = active_item['snippet'].get('videoOwnerChannelTitle', 'Unknown')
-    raw_track = active_item['snippet'].get('title', 'Unknown')
-    artist, track = clean_name(raw_artist), clean_name(raw_track)
+    # --- FIXED NAME HANDLING ---
+    raw_artist = active_item['snippet'].get('videoOwnerChannelTitle', '')
+    raw_track = active_item['snippet'].get('title', '')
 
+    artist = clean_name(raw_artist) or "Unknown"
+    track = clean_name(raw_track) or "Track"
+
+    # Metadata
     metadata = {
         "title": f"{artist} - {track}",
         "artist": artist,
         "track": track,
         "video_id": vid_id,
-        "playlist_item_id": playlist_item_id, 
+        "playlist_item_id": playlist_item_id,
         "yt_url": f"https://www.youtube.com/watch?v={vid_id}",
-        "prefetch_urls": prefetch_urls 
+        "prefetch_urls": prefetch_urls
     }
-    
+
     with open("metadata.json", "w") as f:
         json.dump(metadata, f, indent=4)
-    
+
     print("-" * 40)
     print(f"✅ READY: {artist} - {track}")
-    print(f"🚀 Warm-up active for next song: {'Yes' if prefetch_urls else 'No'}")
+    print(f"🚀 Prefetch: {'Yes' if prefetch_urls else 'No'}")
     print("-" * 40)
+
 
 if __name__ == "__main__":
     main()
