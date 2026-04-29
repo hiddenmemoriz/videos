@@ -11,12 +11,7 @@ OUT_DIR="./output"
 
 mkdir -p "$OUT_DIR"
 
-# 2. Re-create the folder (if it was deleted) and move/save the new video back
-# (Assuming your generation script puts the new file back in ./output/)
 
-# 3. Sync the local deletion to Git so the repo also stays clean
-git add -A
-# 1. READ METADATA
 FILENAME="output.mp4"
 if [ -f "$METADATA" ]; then
     ARTIST=$(jq -r '.artist // "Artist"' "$METADATA" | tr ' ' '_')
