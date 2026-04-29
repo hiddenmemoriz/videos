@@ -8,7 +8,6 @@ SCRATCHES="./assets/scratches/1.mp4"
 METADATA="metadata.json"
 OUT_DIR="./output"
 
-rm -rf ./output/*
 
 mkdir -p "$OUT_DIR"
 
