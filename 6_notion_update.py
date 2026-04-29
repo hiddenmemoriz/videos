@@ -41,7 +41,7 @@ def update_notion():
             },
             # Matches your screenshot exactly
             "Type": {
-                "select": {"name": "Videos"}
+                "select": {"name": "Video"}
             },
             # Matches your screenshot exactly
             "Channel": {
