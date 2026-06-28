@@ -1,12 +1,11 @@
 {
-    "title": "d2s1 - please help me",
-    "artist": "d2s1",
-    "track": "please help me",
-    "video_id": "vmvEWQc9j_M",
-    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy4yRkI2ODMzMTcwQTRGMTdC",
-    "yt_url": "https://www.youtube.com/watch?v=vmvEWQc9j_M",
+    "title": "remind me - rinse",
+    "artist": "remind me",
+    "track": "rinse",
+    "video_id": "EQNbi_L6Cbs",
+    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy43NjBBRkNFNTM1ODdDMDgw",
+    "yt_url": "https://www.youtube.com/watch?v=EQNbi_L6Cbs",
     "prefetch_urls": [
-        "https://www.youtube.com/watch?v=EQNbi_L6Cbs"
-    ],
-    "cloud_file_name": "please help me.webm"
+        "https://www.youtube.com/watch?v=RmcQL7dd_T8"
+    ]
 }
