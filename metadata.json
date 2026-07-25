@@ -1,12 +1,11 @@
 {
-    "title": "remind me - gem",
-    "artist": "remind me",
-    "track": "gem",
-    "video_id": "dUdbgVUZaXU",
-    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy41RjU0OTVCQThDNUUwQzBD",
-    "yt_url": "https://www.youtube.com/watch?v=dUdbgVUZaXU",
+    "title": "furosha - absent",
+    "artist": "furosha",
+    "track": "absent",
+    "video_id": "8XOhudKL83Q",
+    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy5BRjY4NjdBRjA5RTdCMUMx",
+    "yt_url": "https://www.youtube.com/watch?v=8XOhudKL83Q",
     "prefetch_urls": [
-        "https://www.youtube.com/watch?v=8XOhudKL83Q"
-    ],
-    "cloud_file_name": "gem.webm"
+        "https://www.youtube.com/watch?v=2-xwABP2daw"
+    ]
 }
