@@ -1,12 +1,11 @@
 {
-    "title": "remind me - valley",
-    "artist": "remind me",
-    "track": "valley",
-    "video_id": "GXz8DP27bBs",
-    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy5BNjBCMUFCN0Q5QzUyMjlG",
-    "yt_url": "https://www.youtube.com/watch?v=GXz8DP27bBs",
+    "title": "les - loss",
+    "artist": "les",
+    "track": "loss",
+    "video_id": "5pgr1d7nroo",
+    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy4yMkNBN0M4QUJEQzYxMjA3",
+    "yt_url": "https://www.youtube.com/watch?v=5pgr1d7nroo",
     "prefetch_urls": [
-        "https://www.youtube.com/watch?v=5pgr1d7nroo"
-    ],
-    "cloud_file_name": "valley.webm"
+        "https://www.youtube.com/watch?v=gv6wXQPDenw"
+    ]
 }
