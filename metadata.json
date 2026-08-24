@@ -7,5 +7,6 @@
     "yt_url": "https://www.youtube.com/watch?v=uQKwAT4sadM",
     "prefetch_urls": [
         "https://www.youtube.com/watch?v=4xwiLf8AgPE"
-    ]
+    ],
+    "cloud_file_name": "tempest.webm"
 }
