@@ -1,12 +1,11 @@
 {
-    "title": "ohhdeer - tempest",
-    "artist": "ohhdeer",
-    "track": "tempest",
-    "video_id": "uQKwAT4sadM",
-    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy5ENjg2QjQ3OTVDOUE2QzYw",
-    "yt_url": "https://www.youtube.com/watch?v=uQKwAT4sadM",
+    "title": "analog_mannequin - and all its contents",
+    "artist": "analog_mannequin",
+    "track": "and all its contents",
+    "video_id": "4xwiLf8AgPE",
+    "playlist_item_id": "UEw4V0dZdDJmaGVuRFdGYUZMQkZPOXpwV1N0YVlMLTN1Yy41ODJDREU4NjNDRTM2QkNC",
+    "yt_url": "https://www.youtube.com/watch?v=4xwiLf8AgPE",
     "prefetch_urls": [
-        "https://www.youtube.com/watch?v=4xwiLf8AgPE"
-    ],
-    "cloud_file_name": "tempest.webm"
+        "https://www.youtube.com/watch?v=Y72E2muhxu0"
+    ]
 }
