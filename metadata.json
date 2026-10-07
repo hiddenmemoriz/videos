@@ -7,5 +7,6 @@
     "yt_url": "https://www.youtube.com/watch?v=QAFXMB_e2Oc",
     "prefetch_urls": [
         "https://www.youtube.com/watch?v=xptW4gF364A"
-    ]
+    ],
+    "cloud_file_name": "nomad.webm"
 }
